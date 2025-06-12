@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Магазин Максалина</title>
+
+  <!-- Manifest -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Иконка -->
+  <link rel="icon" href="icon.png" type="image/png" />
+
+  <!-- Стили -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker подключен"))
+        .catch(err => console.error("Ошибка подключения Service Worker:", err));
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>Добро пожаловать в магазин Максалина</h1>
+    <p>Выберите категорию ниже, чтобы начать просмотр товаров.</p>
+  </header>
+
+  <main>
+    <div id="products">
+      <p>Загрузка товаров...</p>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Магазин Максалина</p>
+  </footer>
+
+  <script src="script.js"></script>
+<button id="installBtn" style="display:none; position:fixed; bottom:20px; right:20px; padding:10px 15px; background:#8e44ad; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+  📲 Установить
+</button>
+
+<script>
+  let deferredPrompt;
+  const installBtn = document.getElementById('installBtn');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'block';
+  });
+
+  installBtn.addEventListener('click', () => {
+    installBtn.style.display = 'none';
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+    });
+  });
+</script>
+</body>
+</html>
