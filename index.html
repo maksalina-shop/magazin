@@ -24,10 +24,28 @@
   </script>
 </head>
 <body>
+
   <header>
     <h1>Добро пожаловать в магазин Максалина</h1>
     <p>Выберите категорию ниже, чтобы начать просмотр товаров.</p>
   </header>
+
+  <!-- Кнопка для установки приложения -->
+  <button id="installBtn" style="display:none; position:fixed; bottom:20px; right:20px; padding:10px 15px; background:#8e44ad; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+    📲 Установить
+  </button>
+
+  <nav>
+    <h2>Категории</h2>
+    <select id="categorySelect">
+      <option value="">Все категории</option>
+    </select>
+
+    <h2>Подкатегории</h2>
+    <select id="subcategorySelect" disabled>
+      <option value="">Все подкатегории</option>
+    </select>
+  </nav>
 
   <main>
     <div id="products">
@@ -36,31 +54,153 @@
   </main>
 
   <footer>
+    <h3>Контакты</h3>
+    <p>📞 WhatsApp: <a href="https://wa.me/79161234567" target="_blank">+7 916 123-45-67</a></p>
+    <p>📧 Email: <a href="mailto:info@maksalina.ru">info@maksalina.ru</a></p>
+    <p>📍 Адрес: г. Москва, ул. Примерная, д. 10</p>
     <p>&copy; 2025 Магазин Максалина</p>
   </footer>
 
-  <script src="script.js"></script>
-<button id="installBtn" style="display:none; position:fixed; bottom:20px; right:20px; padding:10px 15px; background:#8e44ad; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
-  📲 Установить
-</button>
+  <script>
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
 
-<script>
-  let deferredPrompt;
-  const installBtn = document.getElementById('installBtn');
-
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = 'block';
-  });
-
-  installBtn.addEventListener('click', () => {
-    installBtn.style.display = 'none';
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(() => {
-      deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'block';
     });
-  });
-</script>
+
+    installBtn.addEventListener('click', () => {
+      installBtn.style.display = 'none';
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => {
+        deferredPrompt = null;
+      });
+    });
+
+    const sheetId = "1uvZDDq7y3D73InwHYQ4vKqmhHXGtK9KjdRcVXzm5KAk"; // ID твоей таблицы
+    const sheetName = "Лист1";
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=${sheetName}`;
+
+    let products = [];
+
+    // Загрузка товаров из Google Sheets
+    fetch(url)
+      .then(res => res.text())
+      .then(rep => {
+        const jsonData = JSON.parse(rep.substr(47).slice(0, -2));
+        const rows = jsonData.table.rows;
+        products = rows.map(row => {
+          const cells = row.c;
+          return {
+            category: cells[0]?.v || "",
+            subcategory: cells[1]?.v || "",
+            name: cells[2]?.v || "",
+            description: cells[3]?.v || "",
+            price: cells[4]?.v || "",
+            photo: cells[5]?.v || ""
+          };
+        });
+
+        fillCategoryOptions();
+        renderProducts(products);
+      })
+      .catch(err => {
+        document.getElementById('products').innerHTML = "<p>Ошибка загрузки товаров</p>";
+        console.error(err);
+      });
+
+    // Заполнить селект категорий
+    function fillCategoryOptions() {
+      const categorySelect = document.getElementById("categorySelect");
+      const categories = [...new Set(products.map(p => p.category).filter(c => c))].sort();
+
+      categories.forEach(cat => {
+        const option = document.createElement("option");
+        option.value = cat;
+        option.textContent = cat;
+        categorySelect.appendChild(option);
+      });
+
+      categorySelect.addEventListener("change", () => {
+        const selectedCat = categorySelect.value;
+        fillSubcategoryOptions(selectedCat);
+        filterAndRender();
+      });
+    }
+
+    // Заполнить селект подкатегорий
+    function fillSubcategoryOptions(category) {
+      const subcategorySelect = document.getElementById("subcategorySelect");
+      subcategorySelect.innerHTML = '<option value="">Все подкатегории</option>';
+
+      if (!category) {
+        subcategorySelect.disabled = true;
+        filterAndRender();
+        return;
+      }
+
+      subcategorySelect.disabled = false;
+      const subcategories = [...new Set(products
+        .filter(p => p.category === category)
+        .map(p => p.subcategory)
+        .filter(sc => sc))].sort();
+
+      subcategories.forEach(subcat => {
+        const option = document.createElement("option");
+        option.value = subcat;
+        option.textContent = subcat;
+        subcategorySelect.appendChild(option);
+      });
+
+      subcategorySelect.addEventListener("change", filterAndRender);
+    }
+
+    // Фильтрация и отображение товаров
+    function filterAndRender() {
+      const selectedCat = document.getElementById("categorySelect").value;
+      const selectedSubcat = document.getElementById("subcategorySelect").value;
+
+      let filtered = products;
+
+      if (selectedCat) {
+        filtered = filtered.filter(p => p.category === selectedCat);
+      }
+      if (selectedSubcat) {
+        filtered = filtered.filter(p => p.subcategory === selectedSubcat);
+      }
+
+      renderProducts(filtered);
+    }
+
+    // Отрисовка товаров
+    function renderProducts(items) {
+      const container = document.getElementById("products");
+      container.innerHTML = "";
+
+      if (items.length === 0) {
+        container.innerHTML = "<p>Товары не найдены.</p>";
+        return;
+      }
+
+      items.forEach(item => {
+        const block = document.createElement("div");
+        block.className = "product";
+
+        block.innerHTML = `
+          <img src="${item.photo}" alt="${item.name}" />
+          <h2>${item.name}</h2>
+          <p><strong>${item.price} ₽</strong></p>
+          <p>${item.description}</p>
+          <p><em>${item.category} / ${item.subcategory}</em></p>
+          <a href="https://wa.me/79161234567?text=Здравствуйте,%20интересует%20товар:%20${encodeURIComponent(item.name)}" target="_blank" class="whatsapp-button">Написать в WhatsApp</a>
+        `;
+
+        container.appendChild(block);
+      });
+    }
+  </script>
+
 </body>
 </html>
