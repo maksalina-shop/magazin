@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Магазин Максалина</title>
 
   <!-- Manifest -->
@@ -24,18 +24,13 @@
   </script>
 </head>
 <body>
-
   <header>
     <h1>Добро пожаловать в магазин Максалина</h1>
     <p>Выберите категорию ниже, чтобы начать просмотр товаров.</p>
   </header>
 
-  <!-- Кнопка для установки приложения -->
-  <button id="installBtn" style="display:none; position:fixed; bottom:20px; right:20px; padding:10px 15px; background:#8e44ad; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
-    📲 Установить
-  </button>
-
-  <nav>
+  <!-- Секция каталога -->
+  <nav id="catalogSection">
     <h2>Категории</h2>
     <select id="categorySelect">
       <option value="">Все категории</option>
@@ -45,47 +40,64 @@
     <select id="subcategorySelect" disabled>
       <option value="">Все подкатегории</option>
     </select>
+
+    <main>
+      <div id="products">
+        <p>Загрузка товаров...</p>
+      </div>
+    </main>
   </nav>
 
-  <main>
-    <div id="products">
-      <p>Загрузка товаров...</p>
-    </div>
-  </main>
-
-  <footer>
+  <!-- Секция "О нас" (скрыта по умолчанию) -->
+  <section id="contentAbout" style="display:none; padding: 15px;">
     <h3>Контакты</h3>
     <p>📞 WhatsApp: <a href="https://wa.me/79161234567" target="_blank">+7 916 123-45-67</a></p>
     <p>📧 Email: <a href="mailto:info@maksalina.ru">info@maksalina.ru</a></p>
     <p>📍 Адрес: г. Москва, ул. Примерная, д. 10</p>
     <p>&copy; 2025 Магазин Максалина</p>
-  </footer>
+  </section>
+
+  <!-- Меню с двумя кнопками -->
+  <nav id="bottomMenu" style="position: fixed; bottom: 0; left: 0; right: 0; background:#f5f5f5; border-top:1px solid #ccc; display:flex; justify-content: space-around; padding:10px 0;">
+    <button id="btnCatalog" style="flex:1; background:#8e44ad; color:#fff; border:none; padding:10px; font-weight:bold; cursor:pointer;">Каталог</button>
+    <button id="btnAbout" style="flex:1; background:#ddd; border:none; padding:10px; font-weight:bold; cursor:pointer;">О нас</button>
+  </nav>
 
   <script>
-    let deferredPrompt;
-    const installBtn = document.getElementById('installBtn');
+    // Кнопки и секции
+    const btnCatalog = document.getElementById('btnCatalog');
+    const btnAbout = document.getElementById('btnAbout');
+    const catalogSection = document.getElementById('catalogSection');
+    const contentAbout = document.getElementById('contentAbout');
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      installBtn.style.display = 'block';
+    btnCatalog.addEventListener('click', () => {
+      catalogSection.style.display = 'block';      // показываем каталог
+      contentAbout.style.display = 'none';         // скрываем "О нас"
+      btnCatalog.style.background = '#8e44ad';     // выделяем кнопку
+      btnCatalog.style.color = '#fff';
+      btnAbout.style.background = '#ddd';
+      btnAbout.style.color = '#000';
     });
 
-    installBtn.addEventListener('click', () => {
-      installBtn.style.display = 'none';
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(() => {
-        deferredPrompt = null;
-      });
+    btnAbout.addEventListener('click', () => {
+      catalogSection.style.display = 'none';       // скрываем каталог
+      contentAbout.style.display = 'block';        // показываем "О нас"
+      btnAbout.style.background = '#8e44ad';       // выделяем кнопку
+      btnAbout.style.color = '#fff';
+      btnCatalog.style.background = '#ddd';
+      btnCatalog.style.color = '#000';
     });
 
-    const sheetId = "1uvZDDq7y3D73InwHYQ4vKqmhHXGtK9KjdRcVXzm5KAk"; // ID твоей таблицы
+    // По умолчанию показываем каталог и выделяем кнопку
+    btnCatalog.click();
+
+    // === Код загрузки товаров из Google Sheets (без изменений) ===
+    const sheetId = "1uvZDDq7y3D73InwHYQ4vKqmhHXGtK9KjdRcVXzm5KAk"; // ID таблицы
     const sheetName = "Лист1";
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=${sheetName}`;
 
     let products = [];
 
-    // Загрузка товаров из Google Sheets
     fetch(url)
       .then(res => res.text())
       .then(rep => {
@@ -111,7 +123,6 @@
         console.error(err);
       });
 
-    // Заполнить селект категорий
     function fillCategoryOptions() {
       const categorySelect = document.getElementById("categorySelect");
       const categories = [...new Set(products.map(p => p.category).filter(c => c))].sort();
@@ -130,7 +141,6 @@
       });
     }
 
-    // Заполнить селект подкатегорий
     function fillSubcategoryOptions(category) {
       const subcategorySelect = document.getElementById("subcategorySelect");
       subcategorySelect.innerHTML = '<option value="">Все подкатегории</option>';
@@ -157,7 +167,6 @@
       subcategorySelect.addEventListener("change", filterAndRender);
     }
 
-    // Фильтрация и отображение товаров
     function filterAndRender() {
       const selectedCat = document.getElementById("categorySelect").value;
       const selectedSubcat = document.getElementById("subcategorySelect").value;
@@ -174,7 +183,6 @@
       renderProducts(filtered);
     }
 
-    // Отрисовка товаров
     function renderProducts(items) {
       const container = document.getElementById("products");
       container.innerHTML = "";
